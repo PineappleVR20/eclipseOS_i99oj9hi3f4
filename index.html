@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Groove Workspace — Claude through Kong</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f5f6ee;--ink:#213c33;--muted:#65776c;--line:#d8dfd0;--green:#285a42;--lime:#d9e88c;--red:#a34132}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"DM Sans",sans-serif}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer;color:inherit}
+button:active{transform:scale(.97)}
+:focus-visible{outline:3px solid #70953c;outline-offset:3px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.app{min-height:100svh;display:grid;grid-template-columns:250px 1fr}
+.sidebar{padding:30px 22px;background:#e9eddf;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:30px}
+.brand{font:600 30px "Space Grotesk";letter-spacing:-.07em}
+.brand span{display:inline-grid;place-items:center;background:var(--green);color:var(--lime);width:34px;height:34px;border-radius:50%;margin-right:7px;font-size:23px}
+.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted)}
+nav{display:flex;flex-direction:column;gap:8px}
+.nav-button{display:flex;gap:12px;align-items:center;border:0;background:transparent;padding:12px;text-align:left;border-radius:6px;font-size:13px}
+.nav-button:hover{background:#dce3cc}
+.nav-button[aria-pressed=true]{background:var(--green);color:white}
+.sidebar-bottom{margin-top:auto}
+.sidebar-bottom p{font-size:11px;line-height:1.8;color:var(--muted)}
+.status{font-size:11px;display:flex;align-items:center;gap:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:#aa9254}
+.dot.connected{background:#388452}
+main{min-width:0;display:flex;flex-direction:column;height:100svh}
+.topbar{height:75px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 35px;border-bottom:1px solid var(--line);gap:12px}
+.topbar-label{font-size:12px}
+.button{border:1px solid var(--line);background:transparent;padding:10px 14px;border-radius:5px;font-size:12px;transition:.2s}
+.button:hover{background:#e5ead9;transform:translateY(-1px)}
+.primary{background:var(--green);border-color:var(--green);color:white}
+.primary:hover{background:#194b33}
+.view{flex:1;min-height:0;overflow:auto}
+.chat-view{display:flex;flex-direction:column}
+.chat-scroll{flex:1;overflow:auto;padding:40px clamp(22px,6vw,85px)}
+.welcome{padding:25px 0 35px;animation:reveal .5s both}
+h1,h2,h3{font-family:"Space Grotesk";font-weight:500;letter-spacing:-.055em}
+h1{font-size:clamp(40px,5.5vw,76px);line-height:1.03;margin:24px 0}
+h1 span{color:#7b955c}
+.intro{font-size:14px;line-height:1.85;max-width:570px;color:var(--muted)}
+.suggestions{display:flex;gap:10px;flex-wrap:wrap;margin:25px 0}
+.suggestion{font-size:11px}
+.message{padding:25px 0;border-top:1px solid var(--line);animation:reveal .25s both}
+.message-label{font-size:10px;text-transform:uppercase;letter-spacing:.16em;margin-bottom:12px;color:var(--muted)}
+.message.assistant .message-label{color:var(--green)}
+.message-text{font-size:14px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}
+.message.error .message-text{color:var(--red)}
+.composer-area{padding:18px clamp(22px,6vw,85px) 15px;border-top:1px solid var(--line);background:#eef1e6}
+.composer{display:flex;gap:12px;align-items:flex-end}
+.composer textarea{flex:1;min-width:0;resize:vertical;min-height:65px;max-height:180px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:14px;font-size:13px;color:var(--ink)}
+.note{font-size:10px;line-height:1.7;color:var(--muted);margin-top:10px}
+.page{padding:35px clamp(22px,6vw,85px)}
+.page h2{font-size:42px;margin:16px 0}
+.field{display:flex;flex-direction:column;gap:8px;font-size:12px;margin:18px 0}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:white;border-radius:5px;padding:12px;color:var(--ink);min-width:0}
+.field textarea{min-height:170px;resize:vertical}
+.actions{display:flex;gap:9px;flex-wrap:wrap}
+.feedback{font-size:12px;line-height:1.8;color:var(--muted);margin-top:15px;overflow-wrap:anywhere}
+.feedback.error{color:var(--red)}
+.browser-view{display:flex;flex-direction:column}
+.browser-tools{padding:12px 20px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
+.browser-tools input{flex:1;min-width:0;border:1px solid var(--line);background:white;padding:10px;border-radius:5px;font-size:12px}
+iframe{width:100%;height:100%;flex:1;min-height:0;border:0;background:white}
+.output{border-top:1px solid var(--line);margin-top:30px;padding-top:20px}
+.output pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.85 "DM Sans"}
+dialog{width:min(620px,calc(100% - 30px));max-height:88svh;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);padding:0;box-shadow:0 30px 100px #193d3430}
+dialog::backdrop{background:#193d3455;backdrop-filter:blur(5px)}
+.dialog-header{display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid var(--line)}
+.dialog-header h2{font-size:26px;margin:0}
+.dialog-body{padding:10px 26px 26px}
+.dialog-body p,details{font-size:12px;line-height:1.8;color:var(--muted)}
+summary{cursor:pointer}
+code{overflow-wrap:anywhere;color:var(--green)}
+.columns{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.warning{border-left:3px solid #a7b76d;padding-left:14px}
+@keyframes reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(max-width:750px){.app{grid-template-columns:1fr}.sidebar{padding:14px 18px;border-right:0;border-bottom:1px solid var(--line);gap:14px}.brand{font-size:25px}.sidebar nav{flex-direction:row}.nav-button{flex:1;font-size:11px;justify-content:center;padding:10px 5px}.sidebar-bottom{display:none}main{height:calc(100svh - 132px)}.topbar{height:60px;padding:0 20px}.chat-scroll{padding-top:20px}.welcome{padding-top:5px}.columns{grid-template-columns:1fr;gap:0}.composer{gap:7px}.composer .button{padding:12px}.page h2{font-size:34px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="brand"><span>⌁</span>groove</div>
+<nav aria-label="Workspace">
+<button class="nav-button" data-view="chat" aria-pressed="true">✳ <span>Claude chat</span></button>
+<button class="nav-button" data-view="scraper" aria-pressed="false">⌁ <span>HTML extractor</span></button>
+<button class="nav-button" data-view="browser" aria-pressed="false">◎ <span>Web browser</span></button>
+</nav>
+<div class="sidebar-bottom">
+<div class="eyebrow">Your workspace, simplified</div>
+<p>Static frontend for GitHub Pages.<br>Claude connects through your own Kong Gateway.</p>
+<div class="status"><span class="dot" id="connection-dot"></span><span id="connection-status">Connection required</span></div>
+</div>
+</aside>
+
+<main>
+<header class="topbar">
+<span class="topbar-label" id="page-label">WORKSPACE / CLAUDE CHAT</span>
+<div class="actions"><button class="button" id="clear-chat">New chat</button><button class="button primary" id="open-settings">Connect Kong ↗</button></div>
+</header>
+
+<section class="view chat-view" id="chat-view" aria-label="Claude chat">
+<div class="chat-scroll" id="chat-scroll">
+<div class="welcome">
+<span class="eyebrow">A fresh space to think</span>
+<h1>Less noise.<br><span>More possibility.</span></h1>
+<p class="intro">Ask, write, and explore with Claude Haiku. Groove uses JavaScript to send messages to your deployed Kong AI Proxy route. Your Anthropic key stays on the gateway.</p>
+<div class="suggestions">
+<button class="button suggestion" data-prompt="Help me plan a simple personal website.">Plan a website ↗</button>
+<button class="button suggestion" data-prompt="Explain how GitHub Pages works in beginner-friendly terms.">Explain GitHub Pages ↗</button>
+</div>
+</div>
+<div id="messages" aria-live="polite" aria-relevant="additions"></div>
+</div>
+<div class="composer-area">
+<form class="composer" id="chat-form">
+<textarea id="chat-input" aria-label="Message Claude" placeholder="What would you like to explore?" maxlength="12000"></textarea>
+<button class="button primary" id="send" type="submit">Send ↑</button>
+<button class="button" id="stop" type="button" hidden>Stop</button>
+</form>
+<div class="note">Enter to send · Shift + Enter for a new line. Claude can make mistakes. GitHub Pages hosts this interface, not Kong.</div>
+</div>
+</section>
+
+<section class="view page" id="scraper-view" aria-label="HTML extractor" hidden>
+<span class="eyebrow">No AI needed</span>
+<h2>Extract the useful parts.</h2>
+<p class="intro">Paste HTML or upload an HTML file to extract its text, headings, and links. Imported HTML is never displayed as a live webpage.</p>
+<label class="field">HTML file<input id="html-file" type="file" accept=".html,.htm,text/html"></label>
+<label class="field">Original page URL — optional<input id="source-url" placeholder="https://example.com/article"></label>
+<label class="field">HTML source<textarea id="html-source" placeholder="Paste HTML here…"></textarea></label>
+<div class="actions"><button class="button primary" id="extract">Extract →</button><button class="button" id="download-extraction" disabled>Download JSON</button></div>
+<div class="feedback" id="extract-status" role="status"></div>
+<div class="output" id="extract-results" hidden><h3 id="extract-title"></h3><pre id="extract-text"></pre></div>
+</section>
+
+<section class="view browser-view" id="browser-view" aria-label="Web browser" hidden>
+<form class="browser-tools" id="browser-form"><input id="browser-url" aria-label="Website URL" placeholder="https://example.com"><button class="button primary">Open</button><button class="button" type="button" id="open-external">External ↗</button></form>
+<iframe id="web-frame" title="Website" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer" src="about:blank"></iframe>
+<div class="note" style="padding:10px 20px">Some sites block iframe embedding. GitHub Pages cannot run PHP proxies. External opens a site only when you click it.</div>
+</section>
+</main>
+</div>
+
+<dialog id="settings" aria-labelledby="settings-title">
+<header class="dialog-header"><h2 id="settings-title">Connect Groove to Kong</h2><button class="button" id="close-settings" aria-label="Close settings">×</button></header>
+<div class="dialog-body">
+<p class="warning"><strong>GitHub Pages runs the HTML and JavaScript only.</strong> You still need a separately deployed Kong Gateway with an Anthropic AI Proxy route. The Kong documentation link is not an API endpoint.</p>
+<form id="settings-form">
+<label class="field">Your Kong HTTPS chat route<input id="endpoint" type="url" placeholder="https://your-gateway.example/groove-chat" required autocomplete="off"></label>
+<div class="columns">
+<label class="field">Request format<select id="format"><option value="openai">OpenAI-compatible chat</option><option value="anthropic">Native Anthropic Messages</option></select></label>
+<label class="field">Gateway authentication<select id="auth"><option value="bearer">Bearer token</option><option value="apikey">Kong key-auth: apikey header</option><option value="session">Authenticated cookie session</option><option value="none">None — private testing only</option></select></label>
+</div>
+<label class="field">Gateway access token — this session only<input id="token" type="password" autocomplete="off" placeholder="A limited gateway credential, NOT an Anthropic API key"></label>
+<label class="field">Claude model ID<input id="model" value="claude-haiku-4-5-20251001" placeholder="Leave blank if Kong sets the model"></label>
+<p>The model must be supported by your provider account and Kong route. Prefer fixing Haiku and token limits on the gateway; client-side limits are not security controls.</p>
+<details>
+<summary>Required Kong and GitHub Pages setup</summary>
+<p>Configure an Anthropic AI Proxy chat route on your gateway. Store the Anthropic key server-side. The default request format uses OpenAI-style chat completions; use native format only if your route supports it.</p>
+<p>For a page at <code>https://USERNAME.github.io/REPOSITORY/</code>, its origin is <code>https://USERNAME.github.io</code>. Configure Kong CORS to allow that origin, POST and OPTIONS, and Content-Type plus Authorization or apikey as needed. Preflight requests must be handled successfully.</p>
+<p>For cookie sessions, allow credentialed CORS with the exact origin, not a wildcard. Cross-site cookie restrictions may still affect sessions.</p>
+<p>Protect the gateway with authentication, rate limits, quotas, and fixed model/token policies. Browser credentials are visible to their user; use short-lived limited tokens or an authenticated backend session. Never commit provider keys or permanent shared credentials to GitHub.</p>
+</details>
+<div id="settings-status" class="feedback" role="status"></div>
+<div class="actions"><button class="button primary">Save connection</button><button class="button" type="button" id="forget">Forget saved connection</button></div>
+</form>
+</div>
+</dialog>
+
+<script>
+"use strict";
+
+/*
+GitHub Pages deployment:
+1. Save this file as index.html in your repository.
+2. Enable Settings > Pages for your chosen branch.
+3. Deploy Kong separately and configure Anthropic and CORS.
+4. Enter YOUR Kong HTTPS route in Connect Kong.
+
+No Anthropic secret belongs in this file.
+No gateway or PHP backend is created by this JavaScript.
+*/
+
+const $ = selector => document.querySelector(selector);
+const STORAGE = "groove-kong-pages-v1";
+let config = {
+  endpoint: "",
+  format: "openai",
+  auth: "bearer",
+  token: "",
+  model: "claude-haiku-4-5-20251001"
+};
+let conversation = [];
+let busy = false;
+let controller = null;
+let requestId = 0;
+let extraction = null;
+let browserURL = "";
+
+try {
+  const saved = JSON.parse(localStorage.getItem(STORAGE));
+  if (saved && typeof saved === "object") {
+    for (const key of ["endpoint","format","auth","model"]) {
+      if (typeof saved[key] === "string") config[key] = saved[key];
+    }
+  }
+} catch {}
+
+function updateConnection(verified = false) {
+  $("#connection-status").textContent = verified
+    ? "Response received from Kong"
+    : config.endpoint ? "Configured · not verified" : "Connection required";
+  $("#connection-dot").classList.toggle("connected", verified);
+  $("#open-settings").textContent = config.endpoint ? "Kong settings ↗" : "Connect Kong ↗";
+}
+updateConnection();
+
+document.querySelectorAll("[data-view]").forEach(button => {
+  button.addEventListener("click", () => {
+    const view = button.dataset.view;
+    for (const name of ["chat","scraper","browser"]) {
+      $("#" + name + "-view").hidden = name !== view;
+    }
+    document.querySelectorAll("[data-view]").forEach(b =>
+      b.setAttribute("aria-pressed", String(b === button)));
+    $("#page-label").textContent = "WORKSPACE / " + ({
+      chat: "CLAUDE CHAT", scraper: "HTML EXTRACTOR", browser: "WEB BROWSER"
+    })[view];
+  });
+});
+
+function openSettings() {
+  for (const key of ["endpoint","format","auth","token","model"]) $("#" + key).value = config[key];
+  $("#settings-status").textContent = "";
+  $("#settings").showModal();
+}
+$("#open-settings").onclick = openSettings;
+$("#close-settings").onclick = () => $("#settings").close();
+
+function setBusy(value) {
+  busy = value;
+  $("#send").disabled = value;
+  $("#send").textContent = value ? "Thinking…" : "Send ↑";
+  $("#stop").hidden = !value;
+}
+function cancelRequest() {
+  requestId++;
+  controller?.abort();
+  controller = null;
+  setBusy(false);
+}
+$("#stop").onclick = cancelRequest;
+
+$("#settings-form").onsubmit = event => {
+  event.preventDefault();
+  try {
+    const endpoint = $("#endpoint").value.trim();
+    const url = new URL(endpoint);
+    if (url.protocol !== "https:" || url.username || url.password) {
+      throw new Error("Use your deployed HTTPS Kong route without credentials in its URL.");
+    }
+    const auth = $("#auth").value;
+    const token = $("#token").value.trim();
+    if (["bearer","apikey"].includes(auth) && !token) {
+      throw new Error("Enter a gateway access token.");
+    }
+    if (/^sk-ant-/i.test(token)) {
+      throw new Error("That looks like an Anthropic key. Keep it in Kong, not in this page.");
+    }
+    cancelRequest();
+    config = {
+      endpoint: url.href, format: $("#format").value,
+      auth, token, model: $("#model").value.trim()
+    };
+    conversation = [];
+    $("#messages").replaceChildren();
+    const { token: secret, ...safe } = config;
+    try { localStorage.setItem(STORAGE, JSON.stringify(safe)); } catch {}
+    updateConnection();
+    $("#settings").close();
+  } catch (error) {
+    $("#settings-status").textContent = error.message;
+    $("#settings-status").classList.add("error");
+  }
+};
+
+$("#forget").onclick = () => {
+  cancelRequest();
+  try { localStorage.removeItem(STORAGE); } catch {}
+  config.endpoint = "";
+  config.token = "";
+  $("#endpoint").value = "";
+  $("#token").value = "";
+  conversation = [];
+  $("#messages").replaceChildren();
+  updateConnection();
+  $("#settings-status").textContent = "Saved endpoint and session credential removed.";
+};
+
+function addMessage(role, text, error = false) {
+  const article = document.createElement("article");
+  article.className = "message " + role + (error ? " error" : "");
+  const label = document.createElement("div");
+  label.className = "message-label";
+  label.textContent = role === "user" ? "You" : "Groove · Claude";
+  const body = document.createElement("div");
+  body.className = "message-text";
+  body.textContent = text; // Never execute model output as HTML.
+  article.append(label, body);
+  $("#messages").append(article);
+  $("#chat-scroll").scrollTop = $("#chat-scroll").scrollHeight;
+  return body;
+}
+
+function readAnswer(data) {
+  const normalized = data?.choices?.[0]?.message?.content;
+  if (typeof normalized === "string") return normalized;
+  if (Array.isArray(normalized)) {
+    return normalized.filter(b => typeof b.text === "string").map(b => b.text).join("\n");
+  }
+  if (Array.isArray(data?.content)) {
+    return data.content.filter(b => b.type === "text" && typeof b.text === "string")
+      .map(b => b.text).join("\n");
+  }
+  return "";
+}
+
+async function sendMessage() {
+  const text = $("#chat-input").value.trim();
+  if (!text || busy) return;
+  if (!config.endpoint) { openSettings(); return; }
+  if (["bearer","apikey"].includes(config.auth) && !config.token) {
+    openSettings();
+    $("#settings-status").textContent = "Enter your gateway token again. Tokens are not saved between sessions.";
+    return;
+  }
+
+  $("#chat-input").value = "";
+  addMessage("user", text);
+  const output = addMessage("assistant", "Connecting to Kong…");
+  const id = ++requestId;
+  const current = { ...config };
+  const abort = new AbortController();
+  controller = abort;
+  setBusy(true);
+  const timeout = setTimeout(() => abort.abort(), 90000);
+
+  try {
+    const headers = { "Content-Type": "application/json" };
+    if (current.auth === "bearer") headers.Authorization = "Bearer " + current.token;
+    if (current.auth === "apikey") headers.apikey = current.token;
+
+    const payload = {
+      messages: [...conversation, { role: "user", content: text }].slice(-20),
+      max_tokens: 2048,
+      stream: false
+    };
+    if (current.model) payload.model = current.model;
+
+    const response = await fetch(current.endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+      credentials: current.auth === "session" ? "include" : "omit",
+      signal: abort.signal
+    });
+
+    if (!response.ok) {
+      const errors = {
+        400: "The route rejected the request. Check its request format and model configuration.",
+        401: "Gateway authentication failed. Check your session or gateway token.",
+        403: "Access denied by the gateway.",
+        404: "Kong route not found. Check the endpoint URL.",
+        429: "Rate limit or quota reached. Try again later."
+      };
+      throw new Error(errors[response.status] ||
+        "Gateway returned HTTP " + response.status + ". Check Kong and Anthropic upstream settings.");
+    }
+
+    const data = await response.json();
+    const answer = readAnswer(data);
+    if (!answer.trim()) {
+      throw new Error("No supported text response returned. Configure non-streaming chat completions or Anthropic text blocks.");
+    }
+    if (id !== requestId) return;
+    output.textContent = answer;
+    conversation.push({ role: "user", content: text }, { role: "assistant", content: answer });
+    updateConnection(true);
+  } catch (error) {
+    if (id !== requestId) {
+      output.textContent = "Request stopped.";
+      return;
+    }
+    output.parentElement.classList.add("error");
+    output.textContent = error.name === "AbortError"
+      ? "Request timed out. Check gateway and upstream connectivity."
+      : error instanceof TypeError
+        ? "Could not reach Kong. Check HTTPS, the endpoint, network connectivity, and CORS for " + location.origin + "."
+        : error.message;
+    updateConnection();
+  } finally {
+    clearTimeout(timeout);
+    if (id === requestId) { controller = null; setBusy(false); }
+    $("#chat-scroll").scrollTop = $("#chat-scroll").scrollHeight;
+  }
+}
+
+$("#chat-form").onsubmit = event => { event.preventDefault(); sendMessage(); };
+$("#chat-input").onkeydown = event => {
+  if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+    event.preventDefault(); sendMessage();
+  }
+};
+document.querySelectorAll("[data-prompt]").forEach(button =>
+  button.onclick = () => { $("#chat-input").value = button.dataset.prompt; $("#chat-input").focus(); });
+$("#clear-chat").onclick = () => {
+  cancelRequest();
+  conversation = [];
+  $("#messages").replaceChildren();
+  $("#chat-input").value = "";
+};
+
+// Browser — no PHP or undocumented public proxies.
+function httpURL(raw) {
+  const value = raw.trim();
+  if (!value) throw new Error("Enter a website URL.");
+  const url = new URL(/^https?:\/\//i.test(value) ? value : "https://" + value);
+  if (!["http:","https:"].includes(url.protocol) || url.username || url.password) {
+    throw new Error("Use an HTTP or HTTPS URL without embedded credentials.");
+  }
+  return url.href;
+}
+$("#browser-form").onsubmit = event => {
+  event.preventDefault();
+  try {
+    browserURL = httpURL($("#browser-url").value);
+    $("#web-frame").src = browserURL;
+    $("#browser-url").setCustomValidity("");
+  } catch (error) {
+    $("#browser-url").setCustomValidity(error.message);
+    $("#browser-url").reportValidity();
+  }
+};
+$("#browser-url").oninput = () => $("#browser-url").setCustomValidity("");
+$("#open-external").onclick = () => {
+  try { window.open(httpURL($("#browser-url").value), "_blank", "noopener,noreferrer"); }
+  catch { $("#browser-url").focus(); }
+};
+
+// Local HTML extraction remains available without AI.
+$("#html-file").onchange = async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    $("#extract-status").textContent = "Choose an HTML file under 2 MB.";
+    return;
+  }
+  $("#html-source").value = await file.text();
+  $("#extract-status").textContent = "File loaded. Click Extract.";
+};
+$("#extract").onclick = () => {
+  try {
+    const html = $("#html-source").value;
+    if (!html.trim()) throw new Error("Paste HTML or upload a file first.");
+    if (new Blob([html]).size > 2 * 1024 * 1024) throw new Error("Use HTML under 2 MB.");
+
+    // Remove embedded resources and disable resource attributes before parsing.
+    const safe = html
+      .replace(/<(script|style|iframe|object)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "")
+      .replace(/\b(src|srcset|poster)\s*=/gi, "data-disabled-$1=");
+    const doc = new DOMParser().parseFromString(safe, "text/html");
+    const base = $("#source-url").value.trim() ? httpURL($("#source-url").value) : "";
+    const title = (doc.querySelector("title")?.textContent || "Extracted page").trim();
+    const headings = [...doc.querySelectorAll("h1,h2,h3,h4,h5,h6")]
+      .map(node => ({ level: Number(node.tagName[1]), text: node.textContent.trim() }));
+    const links = [...doc.querySelectorAll("a[href]")].map(node => {
+      let url = "";
+      try {
+        const target = base ? new URL(node.getAttribute("href"), base) : new URL(node.getAttribute("href"));
+        if (["http:","https:"].includes(target.protocol)) url = target.href;
+      } catch {}
+      return { text: node.textContent.trim(), url };
+    }).filter(link => link.url);
+
+    doc.querySelectorAll("script,style,noscript,template,iframe,object,svg").forEach(node => node.remove());
+    const root = doc.querySelector("main") || doc.querySelector("article") || doc.body;
+    root.querySelectorAll("p,div,li,h1,h2,h3,h4,h5,h6,br").forEach(node => node.append("\n"));
+    const text = root.textContent.split("\n")
+      .map(line => line.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n\n");
+    extraction = { title, source: base, text, headings, links };
+    $("#extract-title").textContent = title;
+    $("#extract-text").textContent = text || "No text found.";
+    $("#extract-results").hidden = false;
+    $("#download-extraction").disabled = false;
+    $("#extract-status").textContent = headings.length + " headings · " + links.length + " links extracted.";
+  } catch (error) {
+    $("#extract-status").textContent = error.message;
+  }
+};
+$("#download-extraction").onclick = () => {
+  if (!extraction) return;
+  const url = URL.createObjectURL(new Blob([JSON.stringify(extraction, null, 2)], { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "groove-extraction.json";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+</script>
+</body>
+</html>
